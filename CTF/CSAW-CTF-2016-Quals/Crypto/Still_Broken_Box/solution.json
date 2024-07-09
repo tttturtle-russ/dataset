@@ -1,0 +1,42 @@
+[
+    {
+        "type": "thought",
+        "content": "The obvious guess of error source is a simple RSA-CRT fault. This means that there is an error in the CRT when computing the signature, which means gcd(s\u1d49 - m, N) > 1 allowing us to factor N. The following function tests if there are such anomalies:"
+    },
+    {
+        "type": "execution",
+        "content": "\ndef test_crt_faults():\n    print '[+] Testing faults in CRT...'\n\n    for sig in faulty:\n        ggcd = gcd(ver(sig) - msg, N)\n    \n        if ggcd > 1:\n            print \"[!] Found factor {0}\".format(ggcd)\n            break\n        \n        for fsig in faulty:\n            if fsig != sig:\n                # try to detect constant errors\n                ggcd = gcd(N + ver(sig) - ver(fsig), N)\n                ggcd = ggcd * gcd(ver(sig - fsig), N)\n                if ggcd > 1:\n                    print \"[!] Found factor {0}\".format(ggcd)\n                    break\n    if ggcd == 1:\n        print '[-] No factors found...'\n\t\t"
+    },
+    {
+        "type": "thought",
+        "content": "Turns out, there are no such faults present. Hmm... so what is a possible source of error? The modulus N or the exponent d. The modulus N is a bit cumbersome to handle, so lets try with the secret exponent!\n\nFirst, we sample a lot of signatures from the service. Then, we split the set into a correct signature and several faulty ones."
+    },
+    {
+        "type": "execution",
+        "content": "\nvalid, faulty = [], []\nmsg = 2\nf = open('sigs2.txt', 'r')\n\nfor line in f:\n    sig = int(line)\n    if ver(sig) == 2: valid.append(sig)\n    else: faulty.append(sig)"
+    },
+    {
+        "type": "thought",
+        "content": "Assume that we have a proper signature s and a faulty signature f, then we may compute s \u00d7 f\u207b\u00b9 = m\u1d48 \u00d7 (m\u1d48\u207b\u02b2)\u207b\u00b9 = m\u02b2. If it is a single-bit error, then j = \u00b12\u2071. First we build a look-up table with all\nEOf"
+    },
+    {
+        "type": "execution",
+        "content": "    look_up = {pow(msg, pow(2,i), N) : i for i in range(0,1024)}"
+    },
+    {
+        "type": "thought",
+        "content": "This is merely a way to quickly determine i from \u00b12\u2071 mod N.\u2009Then, for each faulty signature, we compute s \u00d7 q\u207b\u00b9 and s\u207b\u00b9 \u00d7 f and see if there is a match in the table. Since a bit flip is a simple xor, we need to take into account both the change 1 \u2192 0 and 0 \u2192 1. So, if s\u207b\u00b9 \u00d7 f is in the table, then it means the contribution from the bit flip is positive. Therefore, d must be 0 in this position. Equivalently, if s \u00d7 f\u207b\u00b9 is in the table, d must be 1 in that position. It remains to look at sufficiently many random signatures to fill the gaps in information of d.\n\nA high-level description of the algorithm is as follows:"
+    },
+    {
+        "type": "execution",
+        "content": "def test_exponent_faults():\n    print '[+] Generating lookup...'\n    \n    number = ['?'] * 1024\n    look_up = {pow(msg, pow(2,i), N) : i for i in range(0,1024)}\n    valid_inv = libnum.modular.invmod(valid[0], N)\n    \n    print '[+] Looking for matches and recovering secret exponent...'\n    \n    for sig in faulty:\n        st = (sig * valid_inv) % N\n        \n        if st in look_up: \n            number[look_up[st]] = '0'\n        st = (libnum.modular.invmod(sig, N) * valid[0]) % N\n        \n        if st in look_up: \n            number[look_up[st]] = '1'\n            \n    unknown = number.count('?')\n    \n    if unknown == 0:\n        d = int(''.join(number[::-1]), 2)\n        \n        print 'Secret exponent is: {0}'.format(d)\n        print 'Check:', valid[0] == pow(msg, d, N)\n        \n        return d\n    else:\n        print '[+] Recovered bits'\n        print ''.join(number)\n        print 'Remaining unknown: {0} / {1}'.format(unknown, len(number))"
+    },
+    {
+        "type": "thought",
+        "content": "Pretty much the same as above, but the error does only occur in the lower region of d. Also, about 1/4 of the bits. This is a case for a partial key exposure attack :-) We omitt the gritty details here, but it is pretty easy to understand when you realize that some mathematical relations hold when known only a subset of the bits of d. A short explanation:\n\nDefine s = p + q. We know that e \u00d7 d (mod \u03c6(N)) = 1. So, for some k \u2264 e, we have\n\ne \u00d7 d - k \u00d7 \u03c6(N) = e \u00d7 d - k \u00d7 (N - s + 1) = 1.\nNow, we can try all 0 \u2264 k \u2264 e and then solve the equation for s. Then, we can easily compute \u03c6(N) = N - s + 1. It also holds for the partially know d, which we denote d' = d (mod 2\u00b3\u2070\u2070). Hence, it also holds that\n\ne \u00d7 d' - k \u00d7 (N - s + 1) = 1 (mod 2\u00b3\u2070\u2070).\nThe, we solve a quadratic equation (this is the equation you would solve to factor N given \u03c6(N)) for p\n\np\u00b2 - s \u00d7 p + N = 0 (mod 2\u00b3\u2070\u2070).\nNote that we have to repeat this procedure for every choice of k.\n\nFinally, we use a Theorem due to Coppersmith which states that we can factor N in time O(poly(log(N)))."
+    },
+    {
+        "type": "execution",
+        "content": "d = 48553333005218622988737502487331247543207235050962932759743329631099614121360173210513133\nknown_bits = 300\nX = var('X')\nd0 = d % (2 ** known_bits)\nP.<x> = PolynomialRing(Zmod(N))\n\nprint '[ ] Thinking...'\nfor k in xrange(1, e+1):\n    results = solve_mod([e * d0 * X - k * X * (N - X + 1) + k * N == X], 2 ** 300)\n\n    for m in results:\n        f = x * 2 ** known_bits + ZZ(m[0])\n        f = f.monic()\n        roots = f.small_roots(X = 2 ** (N.nbits() / 2 - known_bits), beta=0.3)\n\n        if roots:\n            x0 = roots[0]\n            p = gcd(2 ** known_bits * x0 + ZZ(m[0]), N)\n            print '[+] Found factorization!'\n            print 'p =', ZZ(p)\n            print 'q =', N / ZZ(p)\n            break"
+    }
+]

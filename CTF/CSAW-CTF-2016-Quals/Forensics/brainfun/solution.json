@@ -1,0 +1,10 @@
+[
+    {
+        "type": "thought",
+        "content": "Sort the pixel values by RGB value, using the key red<<8 + green<<4 + blue. Edit (thanks BookGin):\nIt should be red<<16 + green<<8 + blue to sort by full values, but I abused the fact that all the RGB values take the format of 0xN0, so a pixel (0x10, 0x20, 0x30) will get converted to 0x1230 this way.\nI probably should have used struct.pack(\"hhh\", red, green, blue)\nIt turns out that they spell \"owmybrain\", but whatever.Here's a one-liner (it's not very efficient):"
+    },
+    {
+        "type": "execution",
+        "content": "python3 -c '__import__(\"pybrainfuck\").BrainFck().run(\"\".join([chr(p[3]) for p in sorted([list(__import__(\"PIL\", globals(), locals(), [\"Image\"]).Image.open(\"brainfun.png\").getdata())[r*512 + c] for r in range(0, 512, 16) for c in range(0, 512, 16)], key=lambda p: (p[0]<<8) + (p[1]<<4) + p[2])]))'"
+    }
+]

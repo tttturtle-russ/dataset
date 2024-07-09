@@ -1,0 +1,18 @@
+[
+    {
+        "type": "thought",
+        "content": "Running the file we end up with a message: \u201c?W?h?a?t h?a?p?p?e?n?\u201d\nLet\u2019s open the exe in radare2 and view it\u2019s strings looking for interesting strings."
+    },
+    {
+        "type": "execution",
+        "content": "We have 4 interesting strings:\n\nA path: C:\\\\Users\\\\CSAW2016\\\\haha\\\\flag_dir\\\\flag.txt\nThe known message: ?W?h?a?t h?a?p?p?e?n?\nGood key: Congrats You got it!\nBad key: =W=r=o=n=g=K=e=y=\nVisiting the function that uses the path string (X-ref) we understand the program is trying to read the key from it, if it doesn\u2019t exists we would get: ?W?h?a?t h?a?p?p?e?n?\n\nI Created the txt file with \u201caaa\u201d inside and ran again, this time I set a breakpoint before the decision whether to jump to the success or failure message."
+    },
+    {
+        "type": "thought",
+        "content": "echo 'aaa' > C:\\\\Users\\\\CSAW2016\\\\haha\\\\flag_dir\\\\flag.txt"
+    },
+    {
+        "type": "execution",
+        "content": "ow let\u2019s see what we have in what seem like the comparison function.\n\nStepping the lines we can see that my \u201caaa\u201d is compared with a string.This string is the key \u201cidg_cni~bjbfi|gsxb\u201d and also the flag to the challenge."
+    }
+]

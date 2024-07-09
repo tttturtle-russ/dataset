@@ -1,0 +1,26 @@
+[
+    {
+        "type": "thought",
+        "content": "First thing to do is separate the three chunks of base64 (I saved them as b{1..3} here) and decode them:"
+    },
+    {
+        "type": "execution",
+        "content": "base64 -d b1 > out.jpg && base64 -d b2 > flag.zip && base64 -d b3 > cascade.xml"
+    },
+    {
+        "type": "thought",
+        "content": "Then seperate all of the jpgs using foremost (or binwalk, scalpel, etc.):"
+    },
+    {
+        "type": "execution",
+        "content": "foremost out.jpg"
+    },
+    {
+        "type": "thought",
+        "content": "The goal is to find the password to flag.zip, and the clues hint at how to do this. It refers to the OpenCV cascade as a \"map\", and hints that the password is \"what the map points to (no spaces and no caps)\". So we need to run the cascade against all of the pictures, and hopefully whatever it detects will be our password.\n\nI wrote a quick script to run the cascade against all images and save what it detects. Another part of the clue came into play here:\n\nBut remember, the factor of scales be 1.02, and the neighborly sorts be limited to 50!\nThese values are parameters to CascadeClassifier.detectMultiScale, so I make use of those here:"
+    },
+    {
+        "type": "execution",
+        "content": "#!/usr/bin/env python\n\nimport os\nimport sys\nimport cv2\n\n# Get all of the pictures\nimgs = os.listdir('images')\n\n# Cascade we'll be using for detection\ncascade = cv2.CascadeClassifier('cascade.xml')\n\n# From the clues\nscaling_factor = 1.02\nmin_neighbors = 70  # Bumped this up until one pic was left\n\nfor img_name in imgs:\n    # Load the image and run the cascade\n    img = cv2.imread(os.path.join('images', img_name))\n    detect = cascade.detectMultiScale(img, scaling_factor, min_neighbors)\n    if len(detect) > 0:\n        for (x, y, w, h) in detect:\n            # X marks the spot!\n            cv2.line(img, (x, y),     (x + w, y + h), (255, 0, 0), 2)\n            cv2.line(img, (x, y + h), (x + w, y),     (255, 0, 0), 2)\n        # Save the new image\n        cv2.imwrite(os.path.join('detected', img_name), img)"
+    }
+]

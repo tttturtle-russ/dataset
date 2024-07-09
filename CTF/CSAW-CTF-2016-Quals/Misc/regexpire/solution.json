@@ -1,0 +1,10 @@
+[
+    {
+        "type": "thought",
+        "content": "It wasn\u2019t so hard, I asked google for the best way to generate matched string to a given pattern and wrote the following script. The only headache was when my generator used newlines (\u201c\\n\u201d) so I removed them."
+    },
+    {
+        "type": "execution",
+        "content": "from pwn import *\nimport rstr\nimport exrex\nfrom time import sleep\nimport re\n\n# conect to server\nr = remote('misc.chal.csaw.io', 8001)\n\n# Print the question string\nprint r.recvline()\n\n# Counter\ni=1\n\nwhile True:\n\t# Recieve the regex pattern\n    reg = r.recvline()[:-1]\n    print \"%d -------\\n\"%i\n    print reg\n    print \"-------\\n\"\n    ans=rstr.xeger(reg).replace('\\n','') # Remove newlines!\n    # ans=exrex.getone(reg).replace('\\n','')  # Another possible option\n    r.sendline(ans)\n    i+=1\n\tsleep(0.2)"
+    }
+]

@@ -1,0 +1,22 @@
+[
+    {
+        "type": "thought",
+        "content": "we get a BASE64 stream of data. Decrypting it, we see that it is not a valid PNG. Let us try simple XOR. We take a known plaintext from another PNG and try to XOR with the cipertext in hope to get the key."
+    },
+    {
+        "type": "execution",
+        "content": "# extracted from reference image\nheader = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, \n          0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, \n\t\t  0x00, 0x00, 0x07, 0x9C, 0x00, 0x00, 0x05, 0x7A, \n\t\t  0x08, 0x06, 0x00, 0x00, 0x00, 0x31, 0xA6, 0x00, \n\t\t  0xF6, 0x00, 0x00, 0x00]\n\nf = open('magic.png', 'r')\ni = 0\nj = 8\nout = ''\ndata = f.read()\nfor char in data:\n    out += chr(ord(char) ^ header[i % len(header)])\n    i += 1\nkey = out[0:12]\nprint 'Found key: {0}'.format(key)\noutput = ''"
+    },
+    {
+        "type": "thought",
+        "content": "This gives us WoAh_A_Key!?. Re-using the code,"
+    },
+    {
+        "type": "execution",
+        "content": "f = open('magic.png', 'r')\ni = 0\ndata = f.read()\nfor char in data:\n    output += chr(ord(char) ^ ord(key[i % len(key)]))\n    i += 1\n\nf = open('decrypted.png', 'w')\nf.write(output)"
+    },
+    {
+        "type": "thought",
+        "content": "Running it, we decode the image"
+    }
+]

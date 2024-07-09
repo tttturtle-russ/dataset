@@ -1,0 +1,14 @@
+[
+    {
+        "type": "thought",
+        "content": "You *could* maybe check your speed with the game, but really the solution to reverse out the leading sequence of character presses (they're static), then either reverse out the key or probably much quicker is to:Attach the debugger, set the following breakpoints to overwrite register values to fast track you to the key. You'll need to adjust the image address at run time:"
+    },
+    {
+        "type": "execution",
+        "content": "gdb gametime.exe"
+    },
+    {
+        "type": "thought",
+        "content": "Let the program start, paste in the following sequence, including spaces: \n\n' xm xmmx mmxxmx  xm'\n\nA vuln in the program logic allows the user to add character to the key press buffer before they're prompted to. \n\nFinally the program will spit out:\n'key is  (no5c30416d6cf52638460377995c6a8cf5)'"
+    }
+]

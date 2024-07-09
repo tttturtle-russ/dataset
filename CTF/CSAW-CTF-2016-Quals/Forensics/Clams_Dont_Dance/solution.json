@@ -1,0 +1,22 @@
+[
+    {
+        "type": "thought",
+        "content": "We are given with a file. I ran file command on it to figure it\u2019s file type:"
+    },
+    {
+        "type": "execution",
+        "content": "file out.img"
+    },
+    {
+        "type": "thought",
+        "content": "Ok, we have raw image file which will probably contain file/s with the flag. I\u2019ll show 2 methods, choose your preferred one.Run foremost on the file:"
+    },
+    {
+        "type": "execution",
+        "content": "foremost out.img"
+    },
+    {
+        "type": "thought",
+        "content": "You\u2019ll get a folder named output with zip file, movie file and pptx file. Extract the pptx file using 7-zip (PPTX is an archive file), go to the /ppt/media folder and you\u2019ll find the MaxiCode image.Scan it either online or offline to reveal the flag. "
+    }
+]

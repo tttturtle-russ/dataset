@@ -1,0 +1,26 @@
+[
+    {
+        "type": "thought",
+        "content": "It\u2019s a mp4 type video. Checking the metadata blob revealed a base64 encoded string,"
+    },
+    {
+        "type": "execution",
+        "content": "foremost powpow.mp4"
+    },
+    {
+        "type": "thought",
+        "content": "powpow.mp4 's properties show that the Artist is Stefan Hetzl, the Title is `aHR0cDovL3N0ZWdoaWRlLnNvdXJjZWZvcmdlLm5ldC8=`, and the file was last modified October 09, 2003 (the last update to the steghide website). This points to steghide, since the title is base64 for http://steghide.sourceforge.net/ The title of the challenge is \"Watchword\", which is a synonym for password. Using steghide and the password \"password\" on the jpg reveals a text file."
+    },
+    {
+        "type": "execution",
+        "content": "stepic -i output/png/00001069.png -d > thing && steghide extract -sf thing.jpg -p password"
+    },
+    {
+        "type": "thought",
+        "content": "The text file is Base85 for the flag."
+    },
+    {
+        "type": "execution",
+        "content": "python3 -c 'import base64;base64.b85decode(b'W^7?+dsk&3VRB_4W^-?2X=QYIEFgDfAYpQ4AZBT9VQg%9AZBu9Wh@|fWgua4Wgup0ZeeU}c_3kTVQXa}eE')'"
+    }
+]

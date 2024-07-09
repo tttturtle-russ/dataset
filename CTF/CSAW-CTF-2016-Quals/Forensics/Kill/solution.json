@@ -1,0 +1,14 @@
+[
+    {
+        "type": "thought",
+        "content": "This challenge was the first in the Forensics category and was very very simple. We are given with what seems like a corrupted pcapng file, I wasn\u2019t able to open it in Wireshark nor Tcpdump. I ran strings on it with a hope to find the flag:"
+    },
+    {
+        "type": "execution",
+        "content": "strings kill.pcapng | grep -i flag"
+    },
+    {
+        "type": "thought",
+        "content": ""
+    }
+]

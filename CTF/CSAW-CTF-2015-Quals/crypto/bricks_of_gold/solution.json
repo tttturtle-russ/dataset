@@ -1,0 +1,18 @@
+[
+    {
+        "type": "thought",
+        "content": "So, all you know about the file is that's it's encrypted with some kind of CBC algorithm, and that it's annoyingly large.\n\nBasically the way that a CBC algorithm works for encryption is the plaintext is broken up in to blocks, and encryption/decrpytion is handled on a block-by-block basis.\n\nThe first block is XOR-d with an Initialization Vector(IV), and is then put through another (unknown in our case) encryption method, along with a key (also unknown in our case). The result is the first block of ciphertext. This process is applied for all other blocks of plaintext, except instead of xor-ing with the IV, the most recently calculated block of ciphertext is used instead.\n\nFinally, all these blocks are thrown together to create the glorious monstrosity of ciphertext we were given.\nLooking at this (pre-hint), there was no clear indication for what the IV was, until I ran strings on it and \"THE_SECRET_IV=CASH\" was thrown at my face. Okay, now we have the IV, but not the encryption method or key. They said the algorithm is probably terrible, and it's obviously reversible, so I assumed XOR.\n\nThe final step to complete decryption was finding the key. Asking around, I gathered that, when decrypted, it was a valid file; so therefore it has to have a valid header!\n\nKnowing key length == IV length, I went to checking keys to find matching headers to some more popular filetypes:"
+    },
+    {
+        "type": "execution",
+        "content": "IV = \"43 41 53 48\".split(\" \")\nctxt = \"24 58 4D 54\".split(\" \")\nhead = \"ff d8 ff e0\".split(\" \")\n\n#jpeg = ff d8 ff e0\n#png = 89 50 4e 47\n\n\ndef toByte(i):\n\treturn hex(i)[2:]\n\nfor i in xrange(0,4):\n\tprint toByte((int(ctxt[i], 16) ^ int(head[i], 16)) ^ int(IV[i], 16)).decode('hex')"
+    },
+    {
+        "type": "thought",
+        "content": "Then, each of the keys that resulted in a valid header were saved to a file which was then processed by:"
+    },
+    {
+        "type": "execution",
+        "content": "import itertools, string, thread, magic\nimport os\n\ndef xor(s1, s2):\n\tout = \"\"\n\tif len(s1) == len(s2):\n\t\tout = ''.join(chr(ord(c)^ord(k)) for c,k in izip(s1, cycle(s2)))\n\telse:\n\t\tout = ''.join(chr(ord(c)^ord(k)) for c,k in izip(s1, cycle(\"\\x00\"+s2)))\n\t\tprint \"Different length strings\"\n\treturn out\n\nimport collections, operator\nfrom itertools import cycle, izip\nf = open(\"crypto500\", \"rb\")\ndata = f.read()\nf.close()\n\ndef dec(s, key):\n\ts = s.encode('hex')\n\tout = hex(int(s, 16) ^ int(key.encode('hex'),16))[2:]\n\tif not len(out)%2 == 0:\n\t\tout = \"0\" + out\n\treturn out.decode('hex')\n\nblocksize = 4 #4 bytes, 32 bit blocksize\n\nhopeful = \"\"\n\ndef decrypt(key):\t\n\ttempplain = []\n\tcipher = []\n\tcounter = 0\n\tworking = \"\"\n\tapptemp = tempplain.append\n\tappcip = cipher.append\n\tappcip(data[0:blocksize])\n\n\tworking = data[0:blocksize]\n\tworking = xor(working, key)\n\n\ttempplain.append(xor(\"CASH\", working)) \n\n\tfor j in xrange(blocksize,len(data)-blocksize, blocksize):\n\t\tappcip(data[j:j+blocksize])\n\t\n\t\tworking = data[j:j+blocksize]\n\n\t\tworking = xor(data[j:j+blocksize], key)\n\n\t\tworking = xor(cipher[counter], working)\n\t\n\t\tapptemp(working)\n\t\tcounter = counter + 1\n\n\tf = open(\"out/try\"+str(key), \"wb\")\n\tprint len(''.join(tempplain))\n\tf.write(''.join(tempplain))\n\tf.close()\n\nimport sys\n\ndecrypt(sys.argv[1])"
+    }
+]

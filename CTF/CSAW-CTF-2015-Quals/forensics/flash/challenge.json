@@ -1,0 +1,7 @@
+{
+    "name": "flash",
+    "description": "We were able to grab an image of a harddrive. Find out what's on it.",
+    "category": "forensics",
+    "flag": "flag{b3l0w_th3_r4dar}",
+    "files": []
+}

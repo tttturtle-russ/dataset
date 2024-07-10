@@ -1,0 +1,26 @@
+[
+    {
+        "type": "thought",
+        "content": "This was a warm-up \"challenge\". I'm including it as a writeup primarily because I have never posted previously about how to binary translate things like this. The file you download ends in .mpeg, but it's not an mpeg. In fact, the first thing I do with any challenge is to run the Linux \"file\" command on it."
+    },
+    {
+        "type": "execution",
+        "content": "file eps1.1_ones-and-zer0es_c4368e65e1883044f3917485ec928173.mpeg"
+    },
+    {
+        "type": "thought",
+        "content": "I find it a little silly that they're trying to mislead people that way, but it's certainly fair game for a CTF and anyone playing should know better (or learn quickly). In any case, if you cat the file you see a binary string:"
+    },
+    {
+        "type": "execution",
+        "content": "cat eps1.1_ones-and-zer0es_c4368e65e1883044f3917485ec928173.mpeg"
+    },
+    {
+        "type": "thought",
+        "content": "The obvious thing to do first is to see what it translates into. We'll use python (as usual), and first translate it into a large integer. Then change it to hex, which will be the stepping stone into decoding it as text. Note, this challenge could have been made more difficult by changing the encoding. We will use a python module called \"binascii\" to change the string hex into ASCII."
+    },
+    {
+        "type": "execution",
+        "content": "python -c 'from binascii import unhexlify; print(unhexlify(hex(int(open(\"eps1.1_ones-and-zer0es_c4368e65e1883044f3917485ec928173.mpeg\", \"r\").read(), 2))[2:]))'"
+    }
+]

@@ -1,0 +1,7 @@
+{
+    "name": "airport",
+    "description": "We got a bunch of photos from our contact, but can't make anything out of them.",
+    "category": "forensics",
+    "flag": "flag{iH4t3A1rp0rt5}",
+    "files": []
+}

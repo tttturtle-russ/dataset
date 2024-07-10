@@ -1,0 +1,7 @@
+{
+    "name": "Bricks of Gold",
+    "description": "We've captured this encrypted file being smuggled into the country. All we know is that they rolled their own custom CBC mode algorithm - its probably terrible.\nHINT: take a second look at the file for elements needed for the crypto",
+    "category": "crypto",
+    "flag": "flag{c4sh_Rul3s_ev3ryTh1ng_4r0und_m3}",
+    "files": []
+}

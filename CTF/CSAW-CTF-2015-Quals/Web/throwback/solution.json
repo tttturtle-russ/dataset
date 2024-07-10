@@ -1,0 +1,10 @@
+[
+    {
+        "type": "thought",
+        "content": "Hmmm? So CTFd also contains vulns aye? \n\nLets look at the commits from this year:\n\nhttps://github.com/isislab/CTFd/commits/master\n\n>https://github.com/isislab/CTFd/commit/9578355143d7af675fc4776b0f2de802be91e261\n\n>\"Fix authentication for certain admin actions\" \n\nSo apparently, the following routes are not restricted to admin users properly:\n\n>```\n>/admin/chal/new\n>/admin/chal/delete\n>/admin/chal/update\n>```\n\nOk, good to know.. looking further..\n\n\n>https://github.com/isislab/CTFd/commit/5f4a670b7a89f6a4d4536c2b3865391081ac5c9a\n\n>\"Removing debug print statement\"\n\nThis commit removes a 'print files' statement from the /admin/chal/delete action.\n\nDidn't we just see that action?\n\nWe can reach the statement by issueing a POST request to https://ctf.isis.poly.edu/admin/chal/delete, we also need to set the ID parameter:"
+    },
+    {
+        "type": "execution",
+        "content": "curl --url 'https://ctf.isis.poly.edu/admin/chal/delete' --data 'id=ayylmao'"
+    }
+]

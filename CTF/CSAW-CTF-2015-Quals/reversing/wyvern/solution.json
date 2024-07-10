@@ -1,0 +1,30 @@
+[
+    {
+        "type": "thought",
+        "content": "Opening the binary in radare2."
+    },
+    {
+        "type": "execution",
+        "content": "r2 -A wyvern"
+    },
+    {
+        "type": "thought",
+        "content": "shows that the main() function prints the above output. The input is processed by start_quest(std::string). If this function returns 0x1337 the level is solved.\n\nLooking at the start_quest function, it first pushes 28 integers in a vector, does some \"weird\" if-tests, and finally calls sanitize_input. Interestingly, this function again contains a lot of similar and weird if-tests of the form:\n\n    if ( y4 < 10 || (((_BYTE)x3 - 1) * (_BYTE)x3 & 1) == 0 )\n        break;\n\nIt appears this is some kind of obfuscation. At this point I guessed (and hoped) that the input would be checked character by character. This means that if we guess a character correctly, the program will execute a (new) different path in the program. This is ideal for afl-fuzz, a fuzzer that detects \"interesting fuzzing candidates\" based on which path a program executes.\n\nCompiling afl-fuzz with afl-qemu-trace support allows us to fuzz binaries without access to source code:"
+    },
+    {
+        "type": "execution",
+        "content": "mkdir indir && echo \"test\" > indir/test1.bin && afl-fuzz -Q -i indir -o sync_dir -M fuzzer01 ./wyvern"
+    },
+    {
+        "type": "thought",
+        "content": "While the fuzzer will not find crashes, it does find inputs that trigger new execution paths in the program! It took roughly half an hour of fuzzing on 7 cores to get some interesting files:\n\n$ xxd id\\:000006\\,src\\:000005\\,op\\:flip1\\,pos\\:4\n00: 6472 3467 3034 3434 3434 3434 34cd 617c  dr4g044444444.a|\n10: 6166 e803 666c 167c 6170 6116 47         af..fl.|apa.G\n\nAll generated files are 28 bytes long. That's the number of integers pushed into the vector! And it seems it must start with dr4g0n. The integers being put into the vector are:\n\n    array = [0x64, 0xD6, 0x10A, 0x171, 0x1A1, 0x20F, 0x26E,\n       0x2DD, 0x34F, 0x3AE, 0x41E, 0x452, 0x4C6, 0x538,\n       0x5A1, 0x604, 0x635, 0x696, 0x704, 0x763, 0x7CC,\n       0x840, 0x875, 0x8D4, 0x920, 0x96C, 0x9C2, 0xA0F]\n\nWhat's interesting is that 0x64 is the ascii value of \"d\". Does this vector somehow encode the flag? We know the second letter is \"r\" with value 0x72. How can we get this value? By subtracting the first integer, 0x64, from the subsequent one: 0xD6 - 0x64 = 0x72! The solution is:"
+    },
+    {
+        "type": "execution",
+        "content": "array = [0x64, 0xD6, 0x10A, 0x171, 0x1A1, 0x20F, 0x26E,\n       0x2DD, 0x34F, 0x3AE, 0x41E, 0x452, 0x4C6, 0x538,\n       0x5A1, 0x604, 0x635, 0x696, 0x704, 0x763, 0x7CC,\n       0x840, 0x875, 0x8D4, 0x920, 0x96C, 0x9C2, 0xA0F]\n flag = \"\"\n    base = 0\n    for num in array:\n        flag += chr(num - base)\n        base = num\n\n    print flag"
+    },
+    {
+        "type": "thought",
+        "content": ""
+    }
+]

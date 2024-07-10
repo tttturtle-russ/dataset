@@ -1,0 +1,18 @@
+[
+    {
+        "type": "thought",
+        "content": "We are given four PNG pictures named 1.png to 4.png and one JPG named steghide.jpg.\n\nThe PNGs each show an airport from around the world, the JPG shows us the logo of a steganography tool named steghide.\n\nThe author used the steghide tool with a password that has to be found.\n\nThe password consists of the abbreviation of each airport seen in the PNGs.\n\nTo find each airport, we can use image reverse search tools like tineye, image raider or Google images.\n\nThe airports are:\n\nHAV - Jos\u00e9 Mart\u00ed International Airport\nHKG - Hong Kong International Airport\nLAX - Los Angeles International Airport\nYYZ - Toronto Pearson International Airport\nConcating all abbreviations together, we get the passphrase HAVHKGLAXYYZ, which we can use to extract data hidden with steghide:"
+    },
+    {
+        "type": "execution",
+        "content": "steghide extract -sf steghide.jpg -p HAVHKGLAXYYZ"
+    },
+    {
+        "type": "thought",
+        "content": "Then check the content of key.txt"
+    },
+    {
+        "type": "execution",
+        "content": "cat key.txt && echo"
+    }
+]

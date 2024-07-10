@@ -1,0 +1,7 @@
+{
+    "name": "notesy",
+    "description": "The flag is not in the flag{} format.\nHINT: If you have the ability to encrypt and decrypt, what do you think the flag is?\nHINT: https://www.youtube.com/watch?v=68BjP5f0ccE",
+    "category": "crypto",
+    "flag": "UNHMAQWZIDYPRCJKBGVSLOETXF",
+    "files": []
+}

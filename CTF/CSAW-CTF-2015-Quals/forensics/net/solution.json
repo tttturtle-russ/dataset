@@ -1,0 +1,22 @@
+[
+    {
+        "type": "thought",
+        "content": "We are given a pcap that we open with wireshark. We see a bunch of TCP, TLSv1.2, HTTP and SSL packets"
+    },
+    {
+        "type": "execution",
+        "content": "tshark -r net_756d631588cb0a400cc16d1848a5f0fb.pcap  | awk '{print $7}' | sort | uniq -c | sort -n"
+    },
+    {
+        "type": "thought",
+        "content": "Searching for the string flag, we see something interesting:"
+    },
+    {
+        "type": "execution",
+        "content": "strings net_756d631588cb0a400cc16d1848a5f0fb.pcap | grep -i flag"
+    },
+    {
+        "type": "thought",
+        "content": "Let's find that string using wireshark:\n\nLooks like some sort of python script was transferred. We can extract that python script using the TCP follow feature of wireshark.\nSave it as transfer.py, fix some intendation issues and comment out the base64 encoded rest of the TCP stream conversation.\n\nThe last steps are writing a decode function (look at some other writeups) to receive the flag: flag{li0ns_and_tig3rs_4nd_b34rs_0h_mi}."
+    }
+]

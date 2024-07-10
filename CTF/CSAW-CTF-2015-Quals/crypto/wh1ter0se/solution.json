@@ -1,0 +1,10 @@
+[
+    {
+        "type": "thought",
+        "content": "We download provided file. Its contents:\n\nEOY XF, AY VMU M UKFNY TOY YF UFWHYKAXZ EAZZHN. UFWHYKAXZ ZNMXPHN. UFWHYKAXZ\nEHMOYACOI. VH'JH EHHX CFTOUHP FX VKMY'U AX CNFXY FC OU. EOY VH KMJHX'Y EHHX\nIFFQAXZ MY VKMY'U MEFJH OU.\n\nIt doesn't seem to be a Caesar cipher or anything of this sort, however it does look like a substitution cipher. After a while trying to crack it up we decide to upload the input to an [online cipher solver](http://quipqiup.com/index.php), with good results:\n\nBUT NO, IT WAS A SHORT CUT TO SOMETHING BIGGER. SOMETHING GRANDER. SOMETHING\nBEAUTIFUL. WE'VE BEEN FOCUSED ON WHAT'S IN FRONT OF US. BUT WE HAVEN'T BEEN\nLOOKING AT WHAT'S ABOVE US."
+    },
+    {
+        "type": "execution",
+        "content": ""
+    }
+]

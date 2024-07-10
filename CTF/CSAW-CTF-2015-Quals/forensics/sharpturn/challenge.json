@@ -1,0 +1,7 @@
+{
+    "name": "sharpturn",
+    "description": "I think my SATA controller is dying.\nHINT: `git fsck -v`",
+    "category": "forensics",
+    "flag": "flag{3b532e0a187006879d262141e16fa5f05f2e6752}",
+    "files": []
+}

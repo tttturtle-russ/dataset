@@ -1,0 +1,7 @@
+{
+    "name": "autobots",
+    "description": "I hear bots are playing ctfs now.\nNote: Aslr has now been disabled for this challenge",
+    "category": "Pwn",
+    "flag": "flag{c4nt_w4it_f0r_cgc_7h15_y34r}",
+    "files": []
+}

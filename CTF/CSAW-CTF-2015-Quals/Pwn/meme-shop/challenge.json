@@ -1,0 +1,7 @@
+{
+    "name": "meme-shop",
+    "description": "only dwn knows what the meme is!\npwn this service to find out what only he knows!\ndwn: please tell us the meme....",
+    "category": "Pwn",
+    "flag": "flag{dwn: please tell us your meme. I'm not going to stop asking}",
+    "files": []
+}

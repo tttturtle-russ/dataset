@@ -1,0 +1,10 @@
+[
+    {
+        "type": "thought",
+        "content": "We are given an img that we can either mount or view with FTK Imager.\n\nHowever, we can also apply strings to the image to get the flag:"
+    },
+    {
+        "type": "execution",
+        "content": "strings flash_c8429a430278283c0e571baebca3d139.img  | igrep flag"
+    }
+]

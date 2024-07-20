@@ -3,5 +3,7 @@
     "description": "There's a dragon afoot, we need a hero. Give us the dragon's secret and we'll give you a flag.\nHINT: static is only 1 of 2 methods to RE. IDA torrent unnecessary",
     "category": "reversing",
     "flag": "dr4g0n_or_p4tric1an_it5_LLVM",
-    "files": []
+    "files": [
+        "wyvern_c85f1be480808a9da350faaa6104a19b"
+    ]
 }

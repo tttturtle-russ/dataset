@@ -3,5 +3,7 @@
     "description": "Programming is hard. CTF software is hard too. We broke our CTF software a few years ago and looks like we did it again this year\n:( :( :(\nHINT: If you are smart about it, you do not need to attack the CTF infrastructure.\nHINT: The source code of our CTF software is on our Github. Also if you tried the challenge with flag{} before, try again.",
     "category": "Web",
     "flag": "flag{at_least_it_isnt_php}",
-    "files": []
+    "files": [
+        "CTFd/"
+    ]
 }

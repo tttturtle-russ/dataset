@@ -3,5 +3,8 @@
     "description": "So I think you need to pwn this",
     "category": "Pwn",
     "flag": "flag{this_looks_like_its_a_well_hungman}",
-    "files": []
+    "files": [
+        "hungman",
+        "flag.txt"
+    ]
 }

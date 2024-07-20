@@ -3,5 +3,8 @@
     "description": "EOF",
     "category": "Web",
     "flag": "KEY{H0000LY_ST41rRs_S0000_MUCH_SPACE}",
-    "files": []
+    "files": [
+        "run.sh",
+        "arpahack/"
+    ]
 }

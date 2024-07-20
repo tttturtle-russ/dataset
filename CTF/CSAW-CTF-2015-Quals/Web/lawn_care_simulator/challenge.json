@@ -3,5 +3,7 @@
     "description": "",
     "category": "Web",
     "flag": "667e217666098fd0d8055c04c71bebc7",
-    "files": []
+    "files": [
+        "web_problem/"
+    ]
 }

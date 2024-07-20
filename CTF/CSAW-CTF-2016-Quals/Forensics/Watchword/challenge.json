@@ -3,5 +3,7 @@
     "description": "Canned epic hidden snek flavored cookies have shy gorilla.",
     "category": "Forensics",
     "flag": "It\u2019s a mp4 type video. Checking the metadata blob revealed a base64 encoded string,",
-    "files": []
+    "files": [
+        "powpow.mp4"
+    ]
 }

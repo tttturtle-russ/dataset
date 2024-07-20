@@ -3,5 +3,8 @@
     "description": "Only true hackers can see the image in this magic PNG....",
     "category": "Crypto",
     "flag": "flag{l4zy_H4CK3rs_d0nt_g3T_MAg1C_FlaG5}",
-    "files": []
+    "files": [
+        "sleeping.png",
+        "sleeping_dist.py"
+    ]
 }

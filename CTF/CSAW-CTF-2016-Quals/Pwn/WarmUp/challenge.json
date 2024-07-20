@@ -3,5 +3,8 @@
     "description": "So you want to be a pwn-er huh? Well let's throw you an easy one ;)",
     "category": "Pwn",
     "flag": "FLAG{LET_US_BEGIN_CSAW_2016}",
-    "files": []
+    "files": [
+        "warmup",
+        "flag.txt"
+    ]
 }

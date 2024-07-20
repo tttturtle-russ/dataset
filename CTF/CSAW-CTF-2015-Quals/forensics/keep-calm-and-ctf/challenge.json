@@ -3,5 +3,7 @@
     "description": "My friend sends me pictures before every ctf. He told me this one was special.\nNote: this flag doesn't follow the `flag{}` format",
     "category": "forensics",
     "flag": "h1d1ng_in_4lm0st_pla1n_sigh7",
-    "files": []
+    "files": [
+        "keep-calm-and-ctf.jpg"
+    ]
 }

@@ -3,5 +3,7 @@
     "description": "",
     "category": "Pwn",
     "flag": "flag{f0rm47_s7r1ng5_4r3_fun_57uff}",
-    "files": []
+    "files": [
+        "contacts_54f3188f64e548565bc1b87d7aa07427"
+    ]
 }

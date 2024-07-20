@@ -3,5 +3,7 @@
     "description": "Since the Ashley Madison hack, a lot of high profile socialites have scrambled to find the hottest new dating sites. Unfortunately for us, that means they're taking more safety measures and only using secure websites. We have some suspicions that Donald Trump is using a new dating site called \"weebdate\" and also selling cocaine to fund his presidential campaign. We need you to get both his password and his 2 factor TOTP key so we can break into his profile and investigate.\nFlag is md5($totpkey.$password)",
     "category": "Web",
     "flag": "a8815ecd3c2b6d8e2e884e5eb6916900",
-    "files": []
+    "files": [
+        "54.175.160.194/"
+    ]
 }

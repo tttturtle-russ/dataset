@@ -3,5 +3,7 @@
     "description": "I think my SATA controller is dying.\nHINT: `git fsck -v`",
     "category": "forensics",
     "flag": "flag{3b532e0a187006879d262141e16fa5f05f2e6752}",
-    "files": []
+    "files": [
+        "sharpturn.tar.xz-46753a684d909244e7d916cfb5271a95"
+    ]
 }

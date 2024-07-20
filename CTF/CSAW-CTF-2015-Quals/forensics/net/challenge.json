@@ -3,5 +3,7 @@
     "description": "I was sniffing some web traffic for a while, I think i finally got something interesting. Help me find flag through all these packets.",
     "category": "forensics",
     "flag": "flag{li0ns_and_tig3rs_4nd_b34rs_0h_mi}",
-    "files": []
+    "files": [
+        "net_756d631588cb0a400cc16d1848a5f0fb.pcap"
+    ]
 }

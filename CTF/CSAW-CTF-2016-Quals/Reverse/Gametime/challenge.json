@@ -3,5 +3,7 @@
     "description": "A game that requires a user to type either space ('s'), 'm' or 'x' when prompted. If they are fast enough, they get the key. ",
     "category": "Reverse",
     "flag": "(no5c30416d6cf52638460377995c6a8cf5)",
-    "files": []
+    "files": [
+        "gametime.exe"
+    ]
 }

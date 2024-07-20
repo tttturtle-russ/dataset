@@ -3,5 +3,8 @@
     "description": "I fixed the RSA signature box I made, even though it still returns wrong answers sometimes, it get much better now.",
     "category": "Crypto",
     "flag": "flag{n3v3r_l34k_4ny_51n6l3_b17_0f_pr1v473_k3y}",
-    "files": []
+    "files": [
+        "flag.enc",
+        "still_broken_box.py"
+    ]
 }

@@ -3,5 +3,7 @@
     "description": "I thought I found a perfect match but she ended up being my regEx girlfriend.",
     "category": "Misc",
     "flag": "flag{^regularly_express_yourself$}",
-    "files": []
+    "files": [
+        "regexpire.py"
+    ]
 }

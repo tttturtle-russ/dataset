@@ -3,5 +3,7 @@
     "description": "DO WHAT YE WANT 'CAUSE A PIRATE IS FREE. YOU ARE A PIRATE!",
     "category": "Forensics",
     "flag": "flag{b31Ng_4_P1r4tE_1s_4lR1GHT_w1Th_M3}",
-    "files": []
+    "files": [
+        "for200.pcapng"
+    ]
 }

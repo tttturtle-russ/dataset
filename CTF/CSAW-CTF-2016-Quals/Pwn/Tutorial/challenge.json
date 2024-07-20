@@ -1,7 +1,11 @@
 {
-    "name": "This challenge provides an executable and a libc.so file.",
-    "description": "\nRunning this file causes a segfault, so lets look at it in radare2",
+    "name": "Tutorial",
+    "description": "This challenge provides an executable and a libc.so file.\nRunning this file causes a segfault, so lets look at it in radare2",
     "category": "Pwn",
     "flag": "FLAG{3ASY_R0P_R0P_P0P_P0P_YUM_YUM_CHUM_CHUM}",
-    "files": []
+    "files": [
+        "tutorial",
+        "libc-2.19.so",
+        "flag.txt"
+    ]
 }

@@ -3,5 +3,8 @@
     "description": "#Hope #Change #Obama2008",
     "category": "Misc",
     "flag": "flag{started-from-the-bottom-now-my-whole-team-fucking-here}",
-    "files": []
+    "files": [
+        "coins.py",
+        "flag.txt"
+    ]
 }

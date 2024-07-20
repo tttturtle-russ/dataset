@@ -3,5 +3,7 @@
     "description": "Wtf... I literally just setup this website and it's already popped...",
     "category": "Web",
     "flag": "FLAG{p3rl_6_iz_EVEN_BETTER!!1}",
-    "files": []
+    "files": [
+        "./"
+    ]
 }
